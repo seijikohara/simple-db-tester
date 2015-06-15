@@ -5,15 +5,15 @@
 
 	<parent>
 		<groupId>net.relaxism.testing</groupId>
-		<artifactId>simple-db-tester</artifactId>
-		<version>${global.version}</version>
+		<artifactId>simple-db-tester-parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 
 	<dependencies>
 		<dependency>
 			<groupId>net.relaxism.testing</groupId>
-			<artifactId>simple-db-tester-core</artifactId>
-			<version>${global.version}</version>
+			<artifactId>simple-db-tester</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.h2database</groupId>
