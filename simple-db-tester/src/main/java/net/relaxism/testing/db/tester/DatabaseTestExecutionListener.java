@@ -14,14 +14,15 @@ import net.relaxism.testing.db.tester.annotation.Expectation;
 import net.relaxism.testing.db.tester.annotation.Preparation;
 import net.relaxism.testing.db.tester.dataset.XlsPatternDataSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.dbunit.database.IDatabaseConnection;
-import org.dbunit.database.QueryDataSet;
 import org.dbunit.dataset.Column;
 import org.dbunit.dataset.DataSetException;
+import org.dbunit.dataset.DefaultDataSet;
+import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.ITable;
 import org.dbunit.dataset.ITableMetaData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.test.context.TestContext;
@@ -35,8 +36,8 @@ import com.google.common.base.Strings;
 public class DatabaseTestExecutionListener extends
 		AbstractTestExecutionListener {
 
-	private static final Log logger = LogFactory
-			.getLog(DatabaseTestExecutionListener.class);
+	private static final Logger logger = LoggerFactory
+			.getLogger(DatabaseTestExecutionListener.class);
 
 	public final Map<String, DataSource> dataSources = new HashMap<String, DataSource>();
 
@@ -67,26 +68,23 @@ public class DatabaseTestExecutionListener extends
 	public void beforeTestMethod(TestContext testContext) throws Exception {
 		Preparation preparation = AnnotationUtils.getAnnotation(
 				testContext.getTestMethod(), Preparation.class);
+		if (preparation == null)
+			return;
 
-		if (preparation != null) {
-			logger.info("Prepare data set : " + preparation);
+		logger.info("Prepare data set : " + preparation);
+		for (DataSet dataSetAnnotation : preparation.dataSets()) {
+			XlsPatternDataSet xlsDataSet = loadExcelDataSet(
+					testContext.getTestClass(), testContext.getTestMethod(),
+					dataSetAnnotation.resourceLocation(),
+					dataSetAnnotation.patternNames(), DefaultFileSuffix.BEFORE);
 
-			for (DataSet dataSetAnnotation : preparation.dataSets()) {
-				XlsPatternDataSet xlsDataSet = loadExcelDataSet(
-						testContext.getTestClass(),
-						testContext.getTestMethod(),
-						dataSetAnnotation.resourceLocation(),
-						dataSetAnnotation.patternNames(),
-						DefaultFileSuffix.BEFORE);
+			DataSource dataSource = dataSources.get(dataSetAnnotation
+					.dataSourceName());
 
-				DataSource dataSource = dataSources.get(dataSetAnnotation
-						.dataSourceName());
-
-				ConnectionFactory factory = new ConnectionFactory(dataSource);
-				IDatabaseConnection connection = factory.getConnection();
-				preparation.operation().getOperation()
-						.execute(connection, xlsDataSet);
-			}
+			ConnectionFactory factory = new ConnectionFactory(dataSource);
+			IDatabaseConnection connection = factory.getConnection();
+			preparation.operation().getOperation()
+					.execute(connection, xlsDataSet);
 		}
 	}
 
@@ -94,42 +92,46 @@ public class DatabaseTestExecutionListener extends
 	public void afterTestMethod(TestContext testContext) throws Exception {
 		Expectation expectation = AnnotationUtils.getAnnotation(
 				testContext.getTestMethod(), Expectation.class);
-		if (expectation != null) {
-			logger.info("Validate data set : " + expectation);
+		if (expectation == null)
+			return;
 
-			for (DataSet dataSetAnnotation : expectation.dataSets()) {
-				XlsPatternDataSet xlsDataSet = loadExcelDataSet(
-						testContext.getTestClass(),
-						testContext.getTestMethod(),
-						dataSetAnnotation.resourceLocation(),
-						dataSetAnnotation.patternNames(),
-						DefaultFileSuffix.AFTER);
+		logger.info("Validate data set : " + expectation);
+		for (DataSet dataSetAnnotation : expectation.dataSets()) {
+			XlsPatternDataSet expectedDataSet = loadExcelDataSet(
+					testContext.getTestClass(), testContext.getTestMethod(),
+					dataSetAnnotation.resourceLocation(),
+					dataSetAnnotation.patternNames(), DefaultFileSuffix.AFTER);
 
-				DataSource dataSource = dataSources.get(dataSetAnnotation
-						.dataSourceName());
-				ConnectionFactory factory = new ConnectionFactory(dataSource);
-				IDatabaseConnection connection = factory.getConnection();
+			DataSource dataSource = dataSources.get(dataSetAnnotation
+					.dataSourceName());
+			ConnectionFactory factory = new ConnectionFactory(dataSource);
+			IDatabaseConnection connection = factory.getConnection();
 
-				QueryDataSet queryDataSet = new QueryDataSet(connection);
-				for (ITable xlsDataTable : xlsDataSet.getTables()) {
-					ITableMetaData metaData = xlsDataTable.getTableMetaData();
-					String tableName = metaData.getTableName();
-					String[] columnNames = getColumnNames(metaData.getColumns());
-					String[] primaryKeyColumnNames = getColumnNames(metaData
-							.getPrimaryKeys());
-					String selectStatement = "SELECT "
-							+ Joiner.on(", ").join(columnNames)
-							+ " FROM "
-							+ tableName
-							+ (primaryKeyColumnNames.length > 0 ? " ORDER BY "
-									+ COLUMN_JOINER.join(primaryKeyColumnNames)
-									: "");
+			IDataSet databaseDataSet = connection.createDataSet();
+			DefaultDataSet actualDataSet = new DefaultDataSet();
+			for (ITable xlsDataTable : expectedDataSet.getTables()) {
+				ITableMetaData metaData = xlsDataTable.getTableMetaData();
+				String tableName = metaData.getTableName();
+				String[] columnNames = getColumnNames(metaData.getColumns());
 
-					queryDataSet.addTable(tableName, selectStatement);
-				}
+				ITableMetaData actualMetaData = databaseDataSet
+						.getTableMetaData(tableName);
+				String[] primaryKeyColumnNames = getColumnNames(actualMetaData
+						.getPrimaryKeys());
+				String selectStatement = "SELECT "
+						+ Joiner.on(", ").join(columnNames)
+						+ " FROM "
+						+ tableName
+						+ (primaryKeyColumnNames.length > 0 ? " ORDER BY "
+								+ COLUMN_JOINER.join(primaryKeyColumnNames)
+								: "");
 
-				DatabaseAssertion.assertEquals(xlsDataSet, queryDataSet);
+				ITable actualTable = connection.createQueryTable(tableName,
+						selectStatement);
+				actualDataSet.addTable(actualTable);
 			}
+
+			DatabaseAssertion.assertEquals(expectedDataSet, actualDataSet);
 		}
 	}
 
