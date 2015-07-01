@@ -13,8 +13,36 @@ To enable feature, you adds `DatabaseTestExecutionListener` into `@TestExecution
 			DatabaseTestExecutionListener.class })
 ```
 
-`DatabaseTestExecutionListener` scans `javax.sql.DataSource` beans in Spring test context. You can use multiple data source, and default data source bean name is "dataSource".
-The bean must allocated to top level.
+`DatabaseTestExecutionListener` scans `DatabaseTesterContext` class bean in Spring test context.
+
+```xml
+<bean id="dataSource"
+	class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	<property name="driverClassName" value="org.h2.Driver" />
+	<property name="url" value="jdbc:h2:./target/data1" />
+	<property name="username" value="sa" />
+	<property name="password" value="" />
+</bean>
+
+<bean id="dataSource2"
+	class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	<property name="driverClassName" value="org.h2.Driver" />
+	<property name="url" value="jdbc:h2:./target/data2" />
+	<property name="username" value="sa" />
+	<property name="password" value="" />
+</bean>
+
+<bean id="testerContext"
+	class="net.relaxism.testing.db.tester.context.DatabaseTesterContext">
+	<property name="dataSources">
+		<map>
+			<entry key="dataSource" value-ref="dataSource" />
+			<entry key="dataSource2" value-ref="dataSource2" />
+		</map>
+	</property>
+	<property name="defaultDataSourceName" value="dataSource" />
+</bean>
+```
 
 ## Example
 
