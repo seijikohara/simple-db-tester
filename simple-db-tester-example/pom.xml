@@ -5,19 +5,24 @@
 	<parent>
 		<groupId>net.relaxism.testing</groupId>
 		<artifactId>simple-db-tester-parent</artifactId>
-		<version>0.0.5-SNAPSHOT</version>
+		<version>0.1.1-SNAPSHOT</version>
 	</parent>
 
 	<dependencies>
 		<dependency>
 			<groupId>net.relaxism.testing</groupId>
 			<artifactId>simple-db-tester</artifactId>
-			<version>0.0.5-SNAPSHOT</version>
+			<version>0.1.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<version>1.4.187</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>1.7.12</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

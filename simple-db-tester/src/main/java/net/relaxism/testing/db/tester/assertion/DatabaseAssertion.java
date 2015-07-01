@@ -1,8 +1,6 @@
-package net.relaxism.testing.db.tester;
+package net.relaxism.testing.db.tester.assertion;
 
 import java.sql.SQLException;
-
-import net.relaxism.testing.db.tester.assertion.DatabaseAssert;
 
 import org.dbunit.DatabaseUnitException;
 import org.dbunit.assertion.FailureHandler;

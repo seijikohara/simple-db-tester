@@ -1,4 +1,4 @@
-package net.relaxism.testing.db.tester.dataset;
+package net.relaxism.testing.db.tester.dataset.xls;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -12,12 +12,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import net.relaxism.testing.db.tester.dataset.PatternTable;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.dbunit.dataset.AbstractTable;
 import org.dbunit.dataset.Column;
 import org.dbunit.dataset.DataSetException;
 import org.dbunit.dataset.DefaultTableMetaData;
@@ -32,11 +33,8 @@ import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
-public class XlsPatternTable extends AbstractTable {
+public class XlsPatternTable extends PatternTable {
 
-	/**
-	 * Logger for this class
-	 */
 	private static final Logger logger = LoggerFactory
 			.getLogger(XlsPatternTable.class);
 

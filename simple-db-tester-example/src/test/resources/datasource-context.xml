@@ -21,6 +21,17 @@
 		<property name="password" value="" />
 	</bean>
 
+	<bean id="testerContext"
+		class="net.relaxism.testing.db.tester.context.DatabaseTesterContext">
+		<property name="dataSources">
+			<map>
+				<entry key="dataSource" value-ref="dataSource" />
+				<entry key="dataSource2" value-ref="dataSource2" />
+			</map>
+		</property>
+		<property name="defaultDataSourceName" value="dataSource" />
+	</bean>
+
 	<bean id="transactionManager"
 		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
 		<property name="dataSource" ref="dataSource" />

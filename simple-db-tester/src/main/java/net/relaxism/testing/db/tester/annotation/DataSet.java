@@ -17,8 +17,6 @@ public @interface DataSet {
 
 	String resourceLocation() default "";
 
-	String dataSourceName() default DEFAULT_DATA_SOURCE_NAME;
-
-	public static final String DEFAULT_DATA_SOURCE_NAME = "dataSource";
+	String dataSourceName() default "";
 
 }
