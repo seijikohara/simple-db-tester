@@ -38,7 +38,9 @@ public class DatabaseTestExecutionListener extends
 
 	@Override
 	public void afterTestMethod(TestContext testContext) throws Exception {
-		databaseTester.afterTestMethod(testContext.getTestMethod());
+		if (testContext.getTestException() == null) {
+			databaseTester.afterTestMethod(testContext.getTestMethod());
+		}
 	}
 
 	protected DatabaseTesterContext getDatabaseTesterContext(
