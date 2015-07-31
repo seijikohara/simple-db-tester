@@ -26,7 +26,7 @@ import com.google.common.base.Joiner;
 
 public class DatabaseTester {
 
-	private static final Joiner COLUMN_JOINER = Joiner.on(" ");
+	private static final Joiner COLUMN_JOINER = Joiner.on(", ");
 
 	private final DatabaseTesterContext context;
 	private final Class<?> testClass;
@@ -93,11 +93,11 @@ public class DatabaseTester {
 
 				String selectQueryOrderBy = "";
 				if (primaryKeyColumnNames.length > 0) {
-					selectQueryOrderBy = " ORDER BY "
+					selectQueryOrderBy = "ORDER BY "
 							+ COLUMN_JOINER.join(primaryKeyColumnNames);
 				}
 				String selectQuery = String.format("SELECT %s FROM %s %s",
-						Joiner.on(", ").join(columnNames), tableName,
+						COLUMN_JOINER.join(columnNames), tableName,
 						selectQueryOrderBy);
 
 				ITable actualTable = connection.createQueryTable(tableName,
