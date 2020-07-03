@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.relaxism.testing</groupId>
 	<artifactId>simple-db-tester-parent</artifactId>
-	<version>0.1.2-SNAPSHOT</version>
+	<version>0.1.3-SNAPSHOT</version>
 
 	<name>simple-db-tester</name>
 	<url>https://github.com/seijikohara/simple-db-tester</url>
@@ -51,7 +51,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>3.4</version>
+			<version>3.10</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
