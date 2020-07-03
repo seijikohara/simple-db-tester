@@ -42,8 +42,8 @@ public class DatabaseAssert extends DbUnitAssert {
 			failureHandler = getDefaultFailureHandler();
 		}
 
-		String[] expectedNames = getSortedUpperTableNames(expectedDataSet);
-		String[] actualNames = getSortedUpperTableNames(actualDataSet);
+		String[] expectedNames = getSortedTableNames(expectedDataSet);
+		String[] actualNames = getSortedTableNames(actualDataSet);
 
 		// tables count
 		if (expectedNames.length != actualNames.length) {
