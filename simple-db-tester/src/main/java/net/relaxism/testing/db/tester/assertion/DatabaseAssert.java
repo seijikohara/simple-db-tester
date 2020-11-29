@@ -1,7 +1,7 @@
 package net.relaxism.testing.db.tester.assertion;
 
-import com.google.common.base.Joiner;
-import org.apache.commons.lang3.SystemUtils;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.dbunit.DatabaseUnitException;
 import org.dbunit.assertion.DbUnitAssert;
 import org.dbunit.assertion.Difference;
@@ -9,27 +9,21 @@ import org.dbunit.assertion.FailureHandler;
 import org.dbunit.dataset.DataSetException;
 import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.ITable;
-import org.dbunit.dataset.datatype.DataType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
+@Slf4j
 public class DatabaseAssert extends DbUnitAssert {
 
-    private static final Logger logger = LoggerFactory
-        .getLogger(DatabaseAssert.class);
-
     @Override
-    public void assertEquals(IDataSet expectedDataSet, IDataSet actualDataSet,
+    public void assertEquals(final IDataSet expectedDataSet,
+                             final IDataSet actualDataSet,
                              FailureHandler failureHandler) throws DatabaseUnitException {
-        if (logger.isDebugEnabled())
-            logger.debug(
+        if (log.isDebugEnabled())
+            log.debug(
                 "assertEquals(expectedDataSet={}, actualDataSet={}, failureHandler={}) - start",
-                new Object[]{expectedDataSet, actualDataSet,
-                    failureHandler});
+                expectedDataSet, actualDataSet, failureHandler);
 
         // do not continue if same instance
         if (expectedDataSet == actualDataSet) {
@@ -37,12 +31,12 @@ public class DatabaseAssert extends DbUnitAssert {
         }
 
         if (failureHandler == null) {
-            logger.debug("FailureHandler is null. Using default implementation");
+            log.debug("FailureHandler is null. Using default implementation");
             failureHandler = getDefaultFailureHandler();
         }
 
-        String[] expectedNames = getSortedTableNames(expectedDataSet);
-        String[] actualNames = getSortedTableNames(actualDataSet);
+        val expectedNames = getSortedTableNames(expectedDataSet);
+        val actualNames = getSortedTableNames(actualDataSet);
 
         // tables count
         if (expectedNames.length != actualNames.length) {
@@ -62,12 +56,10 @@ public class DatabaseAssert extends DbUnitAssert {
         }
 
         // tables
-        final List<String> errorMessages = new ArrayList<String>();
-        for (int i = 0; i < expectedNames.length; i++) {
-            String name = expectedNames[i];
+        val errorMessages = new ArrayList<String>();
+        for (val name : expectedNames) {
             try {
-                assertEquals(expectedDataSet.getTable(name),
-                    actualDataSet.getTable(name), failureHandler);
+                assertEquals(expectedDataSet.getTable(name), actualDataSet.getTable(name), failureHandler);
             } catch (AssertionError error) {
                 errorMessages.add(error.getMessage());
             }
@@ -76,67 +68,54 @@ public class DatabaseAssert extends DbUnitAssert {
         if (!errorMessages.isEmpty()) {
             throw failureHandler
                 .createFailure("Comparison failure"
-                    + SystemUtils.LINE_SEPARATOR
-                    + Joiner.on(SystemUtils.LINE_SEPARATOR).join(
-                    errorMessages));
+                    + System.lineSeparator()
+                    + String.join(System.lineSeparator(), errorMessages));
         }
     }
 
     @Override
-    protected void compareData(ITable expectedTable, ITable actualTable,
-                               ComparisonColumn[] comparisonCols, FailureHandler failureHandler)
-        throws DataSetException {
-        logger.debug("compareData(expectedTable={}, actualTable={}, "
-                + "comparisonCols={}, failureHandler={}) - start",
-            new Object[]{expectedTable, actualTable, comparisonCols,
-                failureHandler});
+    protected void compareData(final ITable expectedTable,
+                               final ITable actualTable,
+                               final ComparisonColumn[] comparisonCols,
+                               final FailureHandler failureHandler) throws DataSetException {
+        log.debug("compareData(expectedTable={}, actualTable={}, comparisonCols={}, failureHandler={}) - start",
+            expectedTable, actualTable, comparisonCols, failureHandler);
 
         if (expectedTable == null) {
-            throw new NullPointerException(
-                "The parameter 'expectedTable' must not be null");
+            throw new NullPointerException("The parameter 'expectedTable' must not be null");
         }
         if (actualTable == null) {
-            throw new NullPointerException(
-                "The parameter 'actualTable' must not be null");
+            throw new NullPointerException("The parameter 'actualTable' must not be null");
         }
         if (comparisonCols == null) {
-            throw new NullPointerException(
-                "The parameter 'comparisonCols' must not be null");
+            throw new NullPointerException("The parameter 'comparisonCols' must not be null");
         }
         if (failureHandler == null) {
-            throw new NullPointerException(
-                "The parameter 'failureHandler' must not be null");
+            throw new NullPointerException("The parameter 'failureHandler' must not be null");
         }
 
-        final List<String> errorMessages = new ArrayList<String>();
+        val errorMessages = new ArrayList<String>();
 
         // iterate over all rows
         for (int i = 0; i < expectedTable.getRowCount(); i++) {
             // iterate over all columns of the current row
-            for (int j = 0; j < comparisonCols.length; j++) {
-                ComparisonColumn compareColumn = comparisonCols[j];
+            for (val compareColumn : comparisonCols) {
+                val columnName = compareColumn.getColumnName();
+                val dataType = compareColumn.getDataType();
 
-                String columnName = compareColumn.getColumnName();
-                DataType dataType = compareColumn.getDataType();
-
-                Object expectedValue = expectedTable.getValue(i, columnName);
-                Object actualValue = actualTable.getValue(i, columnName);
+                val expectedValue = expectedTable.getValue(i, columnName);
+                val actualValue = actualTable.getValue(i, columnName);
 
                 // Compare the values
                 if (skipCompare(columnName, expectedValue, actualValue)) {
-                    if (logger.isTraceEnabled()) {
-                        logger.trace("ignoring comparison " + expectedValue
-                            + "=" + actualValue + " on column "
-                            + columnName);
+                    if (log.isTraceEnabled()) {
+                        log.trace("ignoring comparison " + expectedValue + "=" + actualValue + " on column " + columnName);
                     }
                     continue;
                 }
 
                 if (dataType.compare(expectedValue, actualValue) != 0) {
-
-                    Difference diff = new Difference(expectedTable,
-                        actualTable, i, columnName, expectedValue,
-                        actualValue);
+                    val diff = new Difference(expectedTable, actualTable, i, columnName, expectedValue, actualValue);
 
                     // Handle the difference (throw error immediately or
                     // something else)
@@ -150,8 +129,7 @@ public class DatabaseAssert extends DbUnitAssert {
         }
 
         if (!errorMessages.isEmpty()) {
-            throw failureHandler.createFailure(Joiner.on(
-                SystemUtils.LINE_SEPARATOR).join(errorMessages));
+            throw failureHandler.createFailure(String.join(System.lineSeparator(), errorMessages));
         }
     }
 

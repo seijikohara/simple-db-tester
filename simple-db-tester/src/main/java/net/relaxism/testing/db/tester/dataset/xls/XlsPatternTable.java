@@ -1,10 +1,13 @@
 package net.relaxism.testing.db.tester.dataset.xls;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.relaxism.testing.db.tester.dataset.PatternTable;
-import org.apache.poi.ss.usermodel.*;
+import net.relaxism.testing.db.tester.util.StringUtils;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.dbunit.dataset.Column;
 import org.dbunit.dataset.DataSetException;
 import org.dbunit.dataset.DefaultTableMetaData;
@@ -12,19 +15,17 @@ import org.dbunit.dataset.ITableMetaData;
 import org.dbunit.dataset.datatype.DataType;
 import org.dbunit.dataset.datatype.DataTypeException;
 import org.dbunit.dataset.excel.XlsDataSetWriter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+@Slf4j
 public class XlsPatternTable extends PatternTable {
-
-    private static final Logger logger = LoggerFactory
-        .getLogger(XlsPatternTable.class);
 
     private static final String PATTERN_MARKER = "[Pattern]";
 
@@ -32,30 +33,28 @@ public class XlsPatternTable extends PatternTable {
 
     private final Data data;
 
-    protected class Data {
+    protected static class Data {
         private final Map<String, Integer> columnIndexes;
-        private final List<List<Object>> data = new ArrayList<List<Object>>();
+        private final List<List<Object>> data = new ArrayList<>();
 
-        public Data(String[] columns) {
-            Map<String, Integer> columnIndexes = new TreeMap<String, Integer>();
-            for (int i = 0; i < columns.length; i++) {
-                columnIndexes.put(columns[i], i);
-            }
-            this.columnIndexes = Collections.unmodifiableMap(columnIndexes);
+        public Data(final String[] columns) {
+            columnIndexes = IntStream.range(0, columns.length)
+                .boxed()
+                .collect(Collectors.toMap(index -> columns[index], index -> index, (i1, i2) -> i2, TreeMap::new));
         }
 
-        public void addRow(Collection<Object> rowData) {
-            data.add(new ArrayList<Object>(rowData));
+        public void addRow(final Collection<Object> rowData) {
+            data.add(new ArrayList<>(rowData));
         }
 
-        public Object getValue(int rowIndex, String columnName) {
-            List<Object> rowData = data.get(rowIndex);
-            int columnIndex = columnIndexes.get(columnName);
+        public Object getValue(final int rowIndex, final String columnName) {
+            val rowData = data.get(rowIndex);
+            val columnIndex = columnIndexes.get(columnName);
             return rowData.get(columnIndex);
         }
 
         public List<String> getColumns() {
-            return new ArrayList<String>(columnIndexes.keySet());
+            return new ArrayList<>(columnIndexes.keySet());
         }
 
         public int getRowCount() {
@@ -77,10 +76,9 @@ public class XlsPatternTable extends PatternTable {
         }
     };
 
-    public XlsPatternTable(Sheet sheet, String... patternNames)
-        throws DataSetException {
-        final String sheetName = sheet.getSheetName();
-        final int rowCount = sheet.getLastRowNum();
+    public XlsPatternTable(final Sheet sheet, final String... patternNames) throws DataSetException {
+        val sheetName = sheet.getSheetName();
+        val rowCount = sheet.getLastRowNum();
 
         // Column header initialize
         if (rowCount >= 0 && sheet.getRow(0) != null) {
@@ -93,33 +91,31 @@ public class XlsPatternTable extends PatternTable {
         data = loadData(sheet, patternNames);
     }
 
-    protected Data loadData(Sheet sheet, String... patternNames)
-        throws DataSetException {
-        final Column[] columns = metaData.getColumns();
-        final String[] columnNames = new String[columns.length];
-        for (int i = 0; i < columns.length; i++) {
-            columnNames[i] = columns[i].getColumnName();
-        }
-        final Data data = new Data(columnNames);
+    protected Data loadData(final Sheet sheet, final String... patternNames) throws DataSetException {
+        val columns = metaData.getColumns();
+        val columnNames = Arrays.stream(columns)
+            .map(Column::getColumnName)
+            .toArray(String[]::new);
+        val data = new Data(columnNames);
 
-        final Set<String> patternNameSet = Sets.newHashSet(patternNames);
+        val patternNameSet = Arrays.stream(patternNames).collect(Collectors.toSet());
 
-        final boolean patterned = isPatternedSheet(sheet);
-        final int columnIndexOffset = patterned ? 1 : 0;
+        val patterned = isPatternedSheet(sheet);
+        val columnIndexOffset = patterned ? 1 : 0;
 
         String currentPatternName = "!_DUMMY_!";
 
-        final int rowCount = sheet.getLastRowNum();
-        final int columnCount = metaData.getColumns().length;
+        val rowCount = sheet.getLastRowNum();
+        val columnCount = metaData.getColumns().length;
         for (int rowIndex = 1; rowIndex <= rowCount; rowIndex++) {
             if (patterned) {
-                Cell cell = sheet.getRow(rowIndex).getCell(0);
+                val cell = sheet.getRow(rowIndex).getCell(0);
 
                 String patternName = null;
                 if (cell != null) {
                     patternName = cell.getStringCellValue();
                 }
-                if (!Strings.isNullOrEmpty(patternName)) {
+                if (StringUtils.isNotEmpty(patternName)) {
                     currentPatternName = patternName;
                 }
                 if (!patternNameSet.contains(currentPatternName)) {
@@ -127,9 +123,9 @@ public class XlsPatternTable extends PatternTable {
                 }
             }
 
-            final List<Object> rowData = new ArrayList<Object>();
+            val rowData = new ArrayList<>();
             for (int columnIndex = columnIndexOffset; columnIndex <= columnCount; columnIndex++) {
-                final Object value = getValue(sheet, rowIndex, columnIndex);
+                val value = getValue(sheet, rowIndex, columnIndex);
                 rowData.add(value);
             }
             data.addRow(rowData);
@@ -138,49 +134,44 @@ public class XlsPatternTable extends PatternTable {
         return data;
     }
 
-    protected boolean isPatternedSheet(Sheet sheet) {
-        Row row = sheet.getRow(0);
+    protected boolean isPatternedSheet(final Sheet sheet) {
+        val row = sheet.getRow(0);
         if (row == null || row.getLastCellNum() < 1) {
             return false;
         }
-        return Objects.equal(PATTERN_MARKER, row.getCell(0)
-            .getRichStringCellValue().getString());
+        return Objects.equals(PATTERN_MARKER, row.getCell(0).getRichStringCellValue().getString());
     }
 
-    protected ITableMetaData createMetaData(String tableName,
-                                            Row columnHeaderRow) {
-        logger.debug(
+    protected ITableMetaData createMetaData(final String tableName, final Row columnHeaderRow) {
+        log.debug(
             "createMetaData(tableName={}, columnHeaderRow={}) - start",
             tableName, columnHeaderRow);
 
-        List<Object> columnList = new ArrayList<Object>();
+        val columnList = new ArrayList<>();
         for (int i = 0; ; i++) {
-            Cell cell = columnHeaderRow.getCell(i);
+            val cell = columnHeaderRow.getCell(i);
             if (cell == null) {
                 break;
             }
 
-            String columnName = cell.getRichStringCellValue().getString();
-            if (Objects.equal(columnName, PATTERN_MARKER)) {
+            val columnName = StringUtils.trim(cell.getRichStringCellValue().getString());
+            if (Objects.equals(columnName, PATTERN_MARKER)) {
                 continue;
-            }
-            if (columnName != null) {
-                columnName = columnName.trim();
             }
 
             // Bugfix for issue ID 2818981 - if a cell has a formatting but no
             // name also ignore it
             if (columnName.length() <= 0) {
-                logger.debug(
+                log.debug(
                     "The column name of column # {} is empty - will skip here assuming the last column was reached",
-                    String.valueOf(i));
+                    i);
                 break;
             }
 
-            Column column = new Column(columnName, DataType.UNKNOWN);
+            val column = new Column(columnName, DataType.UNKNOWN);
             columnList.add(column);
         }
-        Column[] columns = columnList.toArray(new Column[0]);
+        val columns = columnList.toArray(new Column[0]);
         return new DefaultTableMetaData(tableName, columns);
     }
 
@@ -189,23 +180,23 @@ public class XlsPatternTable extends PatternTable {
 
     @Override
     public int getRowCount() {
-        logger.debug("getRowCount() - start");
+        log.debug("getRowCount() - start");
 
         return data.getRowCount();
     }
 
     @Override
     public ITableMetaData getTableMetaData() {
-        logger.debug("getTableMetaData() - start");
+        log.debug("getTableMetaData() - start");
 
         return metaData;
     }
 
     @Override
-    public Object getValue(int row, String column) throws DataSetException {
-        if (logger.isDebugEnabled())
-            logger.debug("getValue(row={}, columnName={}) - start",
-                Integer.toString(row), column);
+    public Object getValue(final int row, final String column) throws DataSetException {
+        if (log.isDebugEnabled())
+            log.debug("getValue(row={}, columnName={}) - start",
+                row, column);
 
         assertValidRowIndex(row);
 
@@ -218,57 +209,50 @@ public class XlsPatternTable extends PatternTable {
      * @return
      * @throws DataSetException
      */
-    public Object getValue(Sheet sheet, int rowIndex, int columnIndex)
-        throws DataSetException {
-        Cell cell = sheet.getRow(rowIndex).getCell(columnIndex);
+    public Object getValue(final Sheet sheet, final int rowIndex, final int columnIndex) throws DataSetException {
+        val cell = sheet.getRow(rowIndex).getCell(columnIndex);
         if (cell == null) {
             return null;
         }
 
-        int type = cell.getCellType();
+        val type = cell.getCellTypeEnum();
         switch (type) {
-            case Cell.CELL_TYPE_NUMERIC:
-                CellStyle style = cell.getCellStyle();
+            case NUMERIC:
+                val style = cell.getCellStyle();
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return getDateValue(cell);
-                } else if (XlsDataSetWriter.DATE_FORMAT_AS_NUMBER_DBUNIT
-                    .equals(style.getDataFormatString())) {
+                } else if (XlsDataSetWriter.DATE_FORMAT_AS_NUMBER_DBUNIT.equals(style.getDataFormatString())) {
                     // The special dbunit date format
                     return getDateValueFromJavaNumber(cell);
-                } else {
-                    return getNumericValue(cell);
                 }
-            case Cell.CELL_TYPE_STRING:
+                return getNumericValue(cell);
+            case STRING:
                 return cell.getRichStringCellValue().getString();
-            case Cell.CELL_TYPE_FORMULA:
-                throw new DataTypeException("Formula not supported at rowIndex="
-                    + rowIndex + ", columnIndex=" + columnIndex);
-            case Cell.CELL_TYPE_BLANK:
+            case FORMULA:
+                throw new DataTypeException("Formula not supported at rowIndex=" + rowIndex + ", columnIndex=" + columnIndex);
+            case BLANK:
                 return null;
-            case Cell.CELL_TYPE_BOOLEAN:
-                return cell.getBooleanCellValue() ? Boolean.TRUE : Boolean.FALSE;
-            case Cell.CELL_TYPE_ERROR:
-                throw new DataTypeException("Error at rowIndex=" + rowIndex
-                    + ", columnIndex=" + columnIndex);
+            case BOOLEAN:
+                return cell.getBooleanCellValue();
+            case ERROR:
+                throw new DataTypeException("Error at rowIndex=" + rowIndex + ", columnIndex=" + columnIndex);
             default:
-                throw new DataTypeException("Unsupported type at row=Index"
-                    + rowIndex + ", columnIndex=" + columnIndex);
+                throw new DataTypeException("Unsupported type at row=Index" + rowIndex + ", columnIndex=" + columnIndex);
         }
     }
 
-    protected Object getDateValueFromJavaNumber(Cell cell) {
-        logger.debug("getDateValueFromJavaNumber(cell={}) - start", cell);
+    protected Object getDateValueFromJavaNumber(final Cell cell) {
+        log.debug("getDateValueFromJavaNumber(cell={}) - start", cell);
 
-        double numericValue = cell.getNumericCellValue();
-        BigDecimal numericValueBd = new BigDecimal(String.valueOf(numericValue));
-        numericValueBd = stripTrailingZeros(numericValueBd);
-        return new Timestamp(numericValueBd.longValue());
+        val numericValue = cell.getNumericCellValue();
+        val numericValueBigDecimal = stripTrailingZeros(new BigDecimal(numericValue));
+        return new Timestamp(numericValueBigDecimal.longValue());
     }
 
-    protected Object getDateValue(Cell cell) {
-        logger.debug("getDateValue(cell={}) - start", cell);
+    protected Object getDateValue(final Cell cell) {
+        log.debug("getDateValue(cell={}) - start", cell);
 
-        double numericValue = cell.getNumericCellValue();
+        val numericValue = cell.getNumericCellValue();
         return new Timestamp(DateUtil.getJavaDate(numericValue).getTime());
     }
 
@@ -279,18 +263,18 @@ public class XlsPatternTable extends PatternTable {
      * @param value The value to be stripped
      * @return The value without trailing zeros
      */
-    private BigDecimal stripTrailingZeros(BigDecimal value) {
+    private BigDecimal stripTrailingZeros(final BigDecimal value) {
         if (value.scale() <= 0) {
             return value;
         }
 
         String valueAsString = String.valueOf(value);
-        int idx = valueAsString.indexOf(".");
-        if (idx == -1) {
+        int indexOfPeriod = valueAsString.indexOf(".");
+        if (indexOfPeriod == -1) {
             return value;
         }
 
-        for (int i = valueAsString.length() - 1; i > idx; i--) {
+        for (int i = valueAsString.length() - 1; i > indexOfPeriod; i--) {
             if (valueAsString.charAt(i) == '0') {
                 valueAsString = valueAsString.substring(0, i);
             } else if (valueAsString.charAt(i) == '.') {
@@ -301,31 +285,28 @@ public class XlsPatternTable extends PatternTable {
                 break;
             }
         }
-        BigDecimal result = new BigDecimal(valueAsString);
-        return result;
+        return new BigDecimal(valueAsString);
     }
 
-    protected BigDecimal getNumericValue(Cell cell) {
-        logger.debug("getNumericValue(cell={}) - start", cell);
+    protected BigDecimal getNumericValue(final Cell cell) {
+        log.debug("getNumericValue(cell={}) - start", cell);
 
-        String formatString = cell.getCellStyle().getDataFormatString();
-        String resultString = null;
-        double cellValue = cell.getNumericCellValue();
+        val cellValue = cell.getNumericCellValue();
+        val formatString = cell.getCellStyle().getDataFormatString();
+        final String resultString = Optional.ofNullable(formatString)
+            .filter(format -> !format.equals("General"))
+            .filter(format -> !format.equals("@"))
+            .map(format -> {
+                val decimalFormat = new DecimalFormat(format, symbols);
+                return decimalFormat.format(cellValue);
+            })
+            .orElse(null);
 
-        if ((formatString != null)) {
-            if (!formatString.equals("General") && !formatString.equals("@")) {
-                logger.debug("formatString={}", formatString);
-                DecimalFormat nf = new DecimalFormat(formatString, symbols);
-                resultString = nf.format(cellValue);
-            }
-        }
-
-        BigDecimal result;
         if (resultString != null) {
             try {
-                result = new BigDecimal(resultString);
+                return new BigDecimal(resultString);
             } catch (NumberFormatException e) {
-                logger.debug(
+                log.debug(
                     "Exception occurred while trying create a BigDecimal. value={}",
                     resultString);
                 // Probably was not a BigDecimal format retrieved from the
@@ -333,12 +314,10 @@ public class XlsPatternTable extends PatternTable {
                 // date formats are not yet recognized by HSSF as DateFormats so
                 // that
                 // we could get here.
-                result = toBigDecimal(cellValue);
+                return toBigDecimal(cellValue);
             }
-        } else {
-            result = toBigDecimal(cellValue);
         }
-        return result;
+        return toBigDecimal(cellValue);
     }
 
     /**
@@ -346,24 +325,27 @@ public class XlsPatternTable extends PatternTable {
      * @return
      * @since 2.4.6
      */
-    private BigDecimal toBigDecimal(double cellValue) {
-        String resultString = String.valueOf(cellValue);
+    private BigDecimal toBigDecimal(final double cellValue) {
+        val cellValueString = String.valueOf(cellValue);
         // To ensure that intergral numbers do not have decimal point and
         // trailing zero
         // (to restore backward compatibility and provide a string
         // representation consistent with Excel)
-        if (resultString.endsWith(".0")) {
-            resultString = resultString.substring(0, resultString.length() - 2);
-        }
-        BigDecimal result = new BigDecimal(resultString);
-        return result;
+        return new BigDecimal(
+            cellValueString.endsWith(".0")
+                ? cellValueString.substring(0, cellValueString.length() - 2)
+                : cellValueString
+        );
 
     }
 
     @Override
     public String toString() {
-        return String.format("%s[name=%s,rows=%d]", getClass().getSimpleName(),
-            getTableMetaData().getTableName(), getRowCount());
+        return String.format(
+            "%s[name=%s,rows=%d]",
+            getClass().getSimpleName(),
+            getTableMetaData().getTableName(),
+            getRowCount());
     }
 
 }

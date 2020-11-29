@@ -1,5 +1,7 @@
 package test;
 
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.relaxism.testing.db.tester.DatabaseTestExecutionListener;
 import net.relaxism.testing.db.tester.annotation.DataSet;
 import net.relaxism.testing.db.tester.annotation.Expectation;
@@ -7,8 +9,6 @@ import net.relaxism.testing.db.tester.annotation.Operation;
 import net.relaxism.testing.db.tester.annotation.Preparation;
 import org.junit.*;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
@@ -25,26 +25,23 @@ import javax.sql.DataSource;
 @TestExecutionListeners({DependencyInjectionTestExecutionListener.class,
     DatabaseTestExecutionListener.class,
     StaticApplicationContextInjectorTestExecutionListener.class})
+@Slf4j
 public class XlsTestCase {
-
-    private static final Logger logger = LoggerFactory
-        .getLogger(XlsTestCase.class);
 
     private static ApplicationContext applicationContext;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        logger.info(">>> BEFORE test class");
+        log.info(">>> BEFORE test class");
 
-        DataSource dataSource = applicationContext.getBean("dataSource",
-            DataSource.class);
+        val dataSource = applicationContext.getBean("dataSource", DataSource.class);
         ScriptUtils.executeSqlScript(
             dataSource.getConnection(),
             new FileSystemResource(ResourceUtils
                 .getFile(ResourceUtils.CLASSPATH_URL_PREFIX
                     + "test/ddl-datasource.sql")));
-        DataSource dataSource2 = applicationContext.getBean("dataSource2",
-            DataSource.class);
+
+        val dataSource2 = applicationContext.getBean("dataSource2", DataSource.class);
         ScriptUtils.executeSqlScript(
             dataSource2.getConnection(),
             new FileSystemResource(ResourceUtils
@@ -54,38 +51,38 @@ public class XlsTestCase {
 
     @AfterClass
     public static void tearDownClass() throws Exception {
-        logger.info(">>> AFTER test class");
+        log.info(">>> AFTER test class");
     }
 
     @Before
     public void setUp() throws Exception {
-        logger.info(">>> BEFORE test method");
+        log.info(">>> BEFORE test method");
     }
 
     @After
     public void tearDown() throws Exception {
-        logger.info(">>> AFTER test method");
+        log.info(">>> AFTER test method");
     }
 
     @Test
     @Preparation
     @Expectation
     public void pattern1() throws Exception {
-        logger.info(">>> TEST METHOD");
+        log.info(">>> TEST METHOD");
     }
 
     @Test
     @Preparation
     @Expectation
     public void pattern2() throws Exception {
-        logger.info(">>> TEST METHOD");
+        log.info(">>> TEST METHOD");
     }
 
     @Test
     @Preparation(dataSets = {@DataSet(patternNames = {"customPattern1", "customPattern2"}, dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-datasource2.xls")}, operation = Operation.CLEAN_INSERT)
     @Expectation(dataSets = {@DataSet(dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-datasource2-expected.xls")})
     public void dataSource2() throws Exception {
-        logger.info(">>> TEST METHOD");
+        log.info(">>> TEST METHOD");
     }
 
 }

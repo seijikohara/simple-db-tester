@@ -9,12 +9,12 @@ import java.util.Collection;
 
 public interface DataSetLoader {
 
-    Collection<PatternDataSet> loadPreparationDataSets(
-        DatabaseTesterContext context, Class<?> testClass, Method testMethod)
-        throws FileNotFoundException;
+    Collection<PatternDataSet> loadPreparationDataSets(DatabaseTesterContext context,
+                                                       Class<?> testClass,
+                                                       Method testMethod) throws FileNotFoundException;
 
-    Collection<PatternDataSet> loadExpectationDataSets(
-        DatabaseTesterContext context, Class<?> testClass, Method testMethod)
-        throws FileNotFoundException;
+    Collection<PatternDataSet> loadExpectationDataSets(DatabaseTesterContext context,
+                                                       Class<?> testClass,
+                                                       Method testMethod) throws FileNotFoundException;
 
 }

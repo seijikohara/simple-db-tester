@@ -1,15 +1,16 @@
 package net.relaxism.testing.db.tester.dataset.loader;
 
-import com.google.common.base.Strings;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.relaxism.testing.db.tester.annotation.DataSet;
 import net.relaxism.testing.db.tester.annotation.Expectation;
 import net.relaxism.testing.db.tester.annotation.Preparation;
 import net.relaxism.testing.db.tester.context.DatabaseTesterContext;
 import net.relaxism.testing.db.tester.dataset.PatternDataSet;
 import net.relaxism.testing.db.tester.dataset.xls.XlsPatternDataSet;
+import net.relaxism.testing.db.tester.util.ArrayUtils;
+import net.relaxism.testing.db.tester.util.StringUtils;
 import org.dbunit.dataset.DataSetException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ResourceUtils;
 
@@ -17,99 +18,84 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
+@Slf4j
 public class TestClassNameBasedDataSetLoader implements DataSetLoader {
 
-    private static final Logger logger = LoggerFactory
-        .getLogger(TestClassNameBasedDataSetLoader.class);
-
     @Override
-    public Collection<PatternDataSet> loadPreparationDataSets(
-        DatabaseTesterContext context, Class<?> testClass, Method testMethod)
-        throws FileNotFoundException {
-        Preparation preparation = AnnotationUtils.getAnnotation(testMethod,
-            Preparation.class);
+    public Collection<PatternDataSet> loadPreparationDataSets(final DatabaseTesterContext context,
+                                                              final Class<?> testClass,
+                                                              final Method testMethod) throws FileNotFoundException {
+        val preparation = AnnotationUtils.getAnnotation(testMethod, Preparation.class);
         if (preparation == null)
             return Collections.emptyList();
 
-        logger.debug("Load preparation data : {}", preparation);
+        log.debug("Load preparation data : {}", preparation);
 
-        DataSet[] dataSetAnnotations = preparation.dataSets();
-        String suffix = "";
+        val dataSetAnnotations = preparation.dataSets();
+        val suffix = "";
 
-        Collection<PatternDataSet> dataSets = loadDataSets(context,
-            dataSetAnnotations, testClass, testMethod, suffix);
-
-        return dataSets;
+        return loadDataSets(context, dataSetAnnotations, testClass, testMethod, suffix);
     }
 
     @Override
-    public Collection<PatternDataSet> loadExpectationDataSets(
-        DatabaseTesterContext context, Class<?> testClass, Method testMethod)
-        throws FileNotFoundException {
-        Expectation expectation = AnnotationUtils.getAnnotation(testMethod,
-            Expectation.class);
+    public Collection<PatternDataSet> loadExpectationDataSets(final DatabaseTesterContext context,
+                                                              final Class<?> testClass,
+                                                              final Method testMethod) throws FileNotFoundException {
+        val expectation = AnnotationUtils.getAnnotation(testMethod, Expectation.class);
         if (expectation == null)
             return Collections.emptyList();
 
-        logger.debug("Load expectation data : {}", expectation);
+        log.debug("Load expectation data : {}", expectation);
 
-        DataSet[] dataSetAnnotations = expectation.dataSets();
-        String suffix = context.getExpectFileSuffix();
+        val dataSetAnnotations = expectation.dataSets();
+        val suffix = context.getExpectFileSuffix();
 
-        Collection<PatternDataSet> dataSets = loadDataSets(context,
-            dataSetAnnotations, testClass, testMethod, suffix);
-
-        return dataSets;
+        return loadDataSets(context, dataSetAnnotations, testClass, testMethod, suffix);
     }
 
-    private Collection<PatternDataSet> loadDataSets(
-        DatabaseTesterContext context, DataSet[] dataSetAnnotations,
-        Class<?> testClass, Method testMethod, String suffix)
-        throws FileNotFoundException {
-        Collection<PatternDataSet> dataSets = new ArrayList<PatternDataSet>();
-        for (DataSet dataSetAnnotation : dataSetAnnotations) {
-            logger.debug("\"DataSet\" : {}", dataSetAnnotation);
+    private Collection<PatternDataSet> loadDataSets(final DatabaseTesterContext context,
+                                                    final DataSet[] dataSetAnnotations,
+                                                    final Class<?> testClass,
+                                                    final Method testMethod,
+                                                    final String suffix) throws FileNotFoundException {
+        return Arrays.stream(dataSetAnnotations)
+            .map(dataSetAnnotation -> {
+                try {
+                    log.debug("\"DataSet\" : {}", dataSetAnnotation);
 
-            File file = resolveFile(dataSetAnnotation.resourceLocation(),
-                testClass, suffix);
+                    val file = resolveFile(dataSetAnnotation.resourceLocation(), testClass, suffix);
 
-            String[] patternNames = dataSetAnnotation.patternNames();
-            if (patternNames == null || patternNames.length < 1) {
-                patternNames = new String[]{testMethod.getName()};
-            }
-            PatternDataSet dataSet = loadDataSet(file, patternNames);
-            dataSet.setDataSource(context.getDataSource(dataSetAnnotation
-                .dataSourceName()));
-
-            dataSets.add(dataSet);
-        }
-        return dataSets;
+                    val patternNames = dataSetAnnotation.patternNames();
+                    val dataSet = loadDataSet(file, ArrayUtils.defaultValue(patternNames, new String[]{testMethod.getName()}));
+                    dataSet.setDataSource(context.getDataSource(dataSetAnnotation.dataSourceName()));
+                    return dataSet;
+                } catch (FileNotFoundException e) {
+                    throw new IllegalStateException(e);
+                }
+            })
+            .collect(Collectors.toList());
     }
 
-    protected File resolveFile(String resourceLocation, Class<?> testClass,
-                               String suffix) throws FileNotFoundException {
-        if (Strings.isNullOrEmpty(resourceLocation)) {
-            resourceLocation = String.format("%s%s%s.xls",
-                ResourceUtils.CLASSPATH_URL_PREFIX, testClass.getName()
-                    .replace('.', '/'), suffix);
-        }
-
-        return ResourceUtils.getFile(resourceLocation);
+    protected File resolveFile(final String resourceLocation,
+                               final Class<?> testClass,
+                               final String suffix) throws FileNotFoundException {
+        return ResourceUtils.getFile(
+            StringUtils.defaultValue(
+                resourceLocation,
+                String.format("%s%s%s.xls", ResourceUtils.CLASSPATH_URL_PREFIX, testClass.getName().replace('.', '/'), suffix)));
     }
 
     protected PatternDataSet loadDataSet(File file, String... patternNames) {
         try {
-            logger.debug("Load file : {} {}", file.getAbsolutePath(),
-                patternNames);
+            log.debug("Load file : {} {}", file.getAbsolutePath(), patternNames);
 
             return new XlsPatternDataSet(file, patternNames);
-        } catch (DataSetException e) {
-            throw new IllegalStateException(e);
-        } catch (IOException e) {
+        } catch (DataSetException | IOException e) {
             throw new IllegalStateException(e);
         }
     }
