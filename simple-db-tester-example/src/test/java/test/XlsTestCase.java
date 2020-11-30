@@ -79,8 +79,8 @@ public class XlsTestCase {
     }
 
     @Test
-    @Preparation(dataSets = {@DataSet(patternNames = {"customPattern1", "customPattern2"}, dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-datasource2.xls")}, operation = Operation.CLEAN_INSERT)
-    @Expectation(dataSets = {@DataSet(dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-datasource2-expected.xls")})
+    @Preparation(dataSets = {@DataSet(patternNames = {"customPattern1", "customPattern2"}, dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-dataSource2.xls")}, operation = Operation.CLEAN_INSERT)
+    @Expectation(dataSets = {@DataSet(dataSourceName = "dataSource2", resourceLocation = "classpath:test/custom-file/XlsTestCase-dataSource2-expected.xls")})
     public void dataSource2() throws Exception {
         log.info(">>> TEST METHOD");
     }
