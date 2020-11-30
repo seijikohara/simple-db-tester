@@ -1,29 +1,25 @@
 package net.relaxism.testing.db.tester.connection.oracle;
 
-import java.sql.SQLException;
-
-import javax.sql.DataSource;
-
+import lombok.val;
 import net.relaxism.testing.db.tester.connection.DefaultDatabaseConnectionFactory;
-
 import org.dbunit.DatabaseUnitException;
 import org.dbunit.database.IDatabaseConnection;
 import org.dbunit.ext.oracle.OracleConnection;
 
-public class OracleDatabaseConnectionFactory extends
-		DefaultDatabaseConnectionFactory {
+import javax.sql.DataSource;
+import java.sql.SQLException;
 
-	@Override
-	public IDatabaseConnection getDatabaseConnection(DataSource dataSource)
-			throws SQLException {
-		OracleDriverManagerDataSource oracleDataSource = (OracleDriverManagerDataSource) dataSource;
+public class OracleDatabaseConnectionFactory extends DefaultDatabaseConnectionFactory {
 
-		try {
-			return new OracleConnection(dataSource.getConnection(),
-					oracleDataSource.getSchema());
-		} catch (DatabaseUnitException e) {
-			throw new IllegalStateException(e);
-		}
-	}
+    @Override
+    public IDatabaseConnection getDatabaseConnection(final DataSource dataSource) throws SQLException {
+        val oracleDataSource = (OracleDriverManagerDataSource) dataSource;
+
+        try {
+            return new OracleConnection(dataSource.getConnection(), oracleDataSource.getSchema());
+        } catch (DatabaseUnitException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
 }

@@ -1,14 +1,12 @@
 package net.relaxism.testing.db.tester.connection;
 
-import java.sql.SQLException;
+import org.dbunit.database.IDatabaseConnection;
 
 import javax.sql.DataSource;
-
-import org.dbunit.database.IDatabaseConnection;
+import java.sql.SQLException;
 
 public interface DatabaseConnectionFactory {
 
-	IDatabaseConnection getDatabaseConnection(DataSource dataSource)
-			throws SQLException;
+    IDatabaseConnection getDatabaseConnection(DataSource dataSource) throws SQLException;
 
 }
