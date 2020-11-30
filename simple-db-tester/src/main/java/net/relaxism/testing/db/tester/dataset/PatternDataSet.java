@@ -1,19 +1,15 @@
 package net.relaxism.testing.db.tester.dataset;
 
-import javax.sql.DataSource;
-
+import lombok.Getter;
+import lombok.Setter;
 import org.dbunit.dataset.AbstractDataSet;
+
+import javax.sql.DataSource;
 
 public abstract class PatternDataSet extends AbstractDataSet {
 
-	private DataSource dataSource;
-
-	public DataSource getDataSource() {
-		return dataSource;
-	}
-
-	public void setDataSource(DataSource dataSource) {
-		this.dataSource = dataSource;
-	}
+    @Getter
+    @Setter
+    private DataSource dataSource;
 
 }
